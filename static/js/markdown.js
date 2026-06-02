@@ -5,7 +5,7 @@
  */
 
 import uiModule from './ui.js';
-import { splitTableRow } from './markdown/tableRow.js';
+import { splitTableRow, isTableSeparator } from './markdown/tableRow.js';
 
 var escapeHtml = uiModule.esc;
 
@@ -535,17 +535,24 @@ export function mdToHtml(src) {
 
     let html = '<table style="border-collapse: collapse; width: 100%; margin: 10px 0;">';
 
+    let tbodyOpen = false;
     rows.forEach((row, idx) => {
+      // The |---|---| separator is structural — open the body but never render
+      // it as a data row (it used to show up as a literal "---" row).
+      if (idx === 1 && isTableSeparator(row)) {
+        html += '<tbody>';
+        tbodyOpen = true;
+        return;
+      }
       const cells = splitTableRow(row);
       if (cells.length === 0) return;
 
-      html += idx === 1 ? '<tbody>' : '';
+      if (idx >= 1 && !tbodyOpen) { html += '<tbody>'; tbodyOpen = true; }
       html += '<tr>';
 
       cells.forEach(cell => {
         const tag = idx === 0 ? 'th' : 'td';
-        const style = idx === 1 ? 'style="border-top: 2px solid var(--red);"' : '';
-        html += `<${tag} ${style} style="padding: 8px; text-align: left; border-bottom: 1px solid var(--border);">${cell.trim()}</${tag}>`;
+        html += `<${tag} style="padding: 8px; text-align: left; border-bottom: 1px solid var(--border);">${cell.trim()}</${tag}>`;
       });
 
       html += '</tr>';

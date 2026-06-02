@@ -16,3 +16,11 @@ export function splitTableRow(row) {
     .split('|')
     .map((cell) => cell.trim());
 }
+
+// True for a header/body separator row like "|---|:--:|---|" — only pipes,
+// dashes, colons and spaces, with at least one dash. These are structural and
+// must not be rendered as a data row (they showed up as a literal "---" row).
+export function isTableSeparator(row) {
+  const s = (row || '').trim();
+  return s.includes('-') && /^[\s|:-]+$/.test(s);
+}
