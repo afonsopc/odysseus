@@ -19,17 +19,27 @@ _HELPER = _REPO / "static" / "js" / "markdown" / "tableRow.js"
 _HAS_NODE = shutil.which("node") is not None
 
 
-def _split(row: str):
-    js = f"""
-    import {{ splitTableRow }} from '{_HELPER.as_posix()}';
-    console.log(JSON.stringify(splitTableRow({json.dumps(row)})));
-    """
+def _node(js: str):
     proc = subprocess.run(
         ["node", "--input-type=module"],
         input=js, capture_output=True, text=True, cwd=str(_REPO), timeout=30,
     )
     assert proc.returncode == 0, proc.stderr
     return json.loads(proc.stdout.strip())
+
+
+def _split(row: str):
+    return _node(
+        f"import {{ splitTableRow }} from '{_HELPER.as_posix()}';"
+        f"console.log(JSON.stringify(splitTableRow({json.dumps(row)})));"
+    )
+
+
+def _is_separator(row: str):
+    return _node(
+        f"import {{ isTableSeparator }} from '{_HELPER.as_posix()}';"
+        f"console.log(JSON.stringify(isTableSeparator({json.dumps(row)})));"
+    )
 
 
 @pytest.mark.skipif(not _HAS_NODE, reason="node binary not on PATH")
@@ -45,3 +55,16 @@ def test_rows_without_outer_pipes():
 @pytest.mark.skipif(not _HAS_NODE, reason="node binary not on PATH")
 def test_header_row_unaffected():
     assert _split("| h1 | h2 | h3 |") == ["h1", "h2", "h3"]
+
+
+@pytest.mark.skipif(not _HAS_NODE, reason="node binary not on PATH")
+def test_separator_rows_detected():
+    assert _is_separator("|---|---|") is True
+    assert _is_separator("| :--- | :---: | ---: |") is True
+
+
+@pytest.mark.skipif(not _HAS_NODE, reason="node binary not on PATH")
+def test_data_rows_not_treated_as_separator():
+    assert _is_separator("| data | here |") is False
+    # An all-empty data row must not be mistaken for a separator.
+    assert _is_separator("|  |  |") is False
