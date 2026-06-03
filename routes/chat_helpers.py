@@ -120,8 +120,12 @@ def needs_auto_name(name: str) -> bool:
         return True
     if name.startswith("Chat:") or name == "Chat":
         return True
-    # Default frontend name: "modelname HH:MM:SS AM/PM"
-    if re.match(r'^.+ \d{1,2}:\d{2}:\d{2}\s*(AM|PM)$', name):
+    # Default frontend name: "modelname HH:MM:SS AM/PM" where modelname is a
+    # single no-space token (model.split('/')[-1]). The old `.+` prefix matched
+    # ANY text, so a user's deliberately chosen multi-word title ending in a
+    # clock time (e.g. "Call with Bob 3:45:00 PM") was treated as a default and
+    # silently overwritten by the auto-namer. Require a single-token prefix.
+    if re.match(r'^\S+ \d{1,2}:\d{2}:\d{2}\s*(AM|PM)$', name):
         return True
     return False
 
